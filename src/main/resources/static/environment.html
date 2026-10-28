@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Environment</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+  <p class="sub"><a href="/">← Fleet</a></p>
+  <h1 id="title">Environment</h1>
+  <div id="out"></div>
+</main>
+<script src="app.js"></script>
+<script>
+nav('fleet');
+const id = new URLSearchParams(location.search).get('id');
+$('#title').textContent = id || 'Environment';
+if (!id) state($('#out'), 'No environment selected', 'Pick one from the fleet page.');
+else load('/api/fleet/environments/' + encodeURIComponent(id), $('#out')).then((e) => {
+  if (!e) return;
+  const hist = (e.history || []);
+  $('#out').innerHTML = `<dl>
+    <dt>Cluster</dt><dd>${esc(e.cluster)}</dd><dt>Phase</dt><dd>${esc(e.phase)}</dd>
+    <dt>Policy</dt><dd>${policyCell(e)}</dd><dt>Desired version</dt><dd>${esc(e.desiredVersion)}</dd>
+    <dt>Applied version</dt><dd>${esc(e.appliedVersion ?? '—')}</dd><dt>Status</dt><dd>${badge(e.status)}</dd>
+    <dt>Detail</dt><dd>${esc(e.statusDetail)}</dd><dt>Last heard</dt><dd>${fmt(e.lastHeardAt)}</dd></dl>
+    <h2>History</h2>` + (hist.length
+      ? `<table><thead><tr><th>At</th><th>Summary</th></tr></thead><tbody>${hist.map((h) => `<tr><td>${fmt(h.at)}</td><td>${esc(h.summary)}</td></tr>`).join('')}</tbody></table>`
+      : `<div class="state"><p>No history yet.</p></div>`);
+});
+</script></body></html>

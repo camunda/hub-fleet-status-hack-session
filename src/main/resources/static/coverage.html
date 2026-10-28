@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Policy coverage</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+  <h1>Policy coverage</h1>
+  <p class="sub">Is a published policy version applied everywhere it needs to be?</p>
+  <div class="controls">
+    <label>Policy <select id="policy"></select></label>
+    <label>Version <select id="version"></select></label>
+  </div>
+  <div id="out"></div>
+</main>
+<script src="app.js"></script>
+<script>
+nav('coverage');
+let policies = [];
+function fillVersions() {
+  const p = policies.find((x) => x.id === $('#policy').value);
+  const vs = [...(p?.versions || [])].sort((a, b) => b.version - a.version);
+  $('#version').innerHTML = vs.map((v) => `<option value="${v.version}">v${v.version} — ${esc(v.summary)}</option>`).join('');
+}
+async function show() {
+  const p = $('#policy').value, v = $('#version').value;
+  if (!p || !v) return state($('#out'), 'Nothing to show', 'Choose a policy and version.');
+  history.replaceState(null, '', `?policy=${encodeURIComponent(p)}&version=${v}`);
+  const d = await load(`/api/policies/${encodeURIComponent(p)}/versions/${v}/coverage`, $('#out'));
+  if (!d) return;
+  const t = d.targets || [];
+  $('#out').innerHTML = `<div class="state"><div>Complete everywhere?</div>
+    <div class="big ${d.complete ? 'yes' : 'no'}">${d.complete ? 'YES' : 'NO'}</div>
+    <div>${esc(d.policy)} v${esc(d.version)} · published ${fmt(d.publishedAt)}</div></div><br>` +
+    (t.length ? `<table><thead><tr><th>Environment</th><th>Status</th><th>Detail</th></tr></thead><tbody>${t.map((x) =>
+      `<tr><td><a href="/environment.html?id=${encodeURIComponent(x.environmentId)}">${esc(x.name)}</a></td><td>${badge(x.status)}</td><td>${esc(x.detail)}</td></tr>`).join('')}</tbody></table>`
+      : `<div class="state"><p>No target environments.</p></div>`);
+}
+load('/api/policies', $('#out')).then((d) => {
+  if (!d) return;
+  policies = d;
+  if (!d.length) return state($('#out'), 'No policies', 'There are no policies yet.');
+  $('#policy').innerHTML = d.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  const q = new URLSearchParams(location.search);
+  if (q.get('policy')) $('#policy').value = q.get('policy');
+  fillVersions();
+  if (q.get('version')) $('#version').value = q.get('version');
+  $('#policy').addEventListener('change', () => { fillVersions(); show(); });
+  $('#version').addEventListener('change', show);
+  show();
+});
+</script></body></html>

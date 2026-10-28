@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fleet</title><link rel="stylesheet" href="style.css"></head>
+<body><main>
+  <h1>Fleet</h1>
+  <p class="sub">What each environment has applied versus what Hub wants it to have.</p>
+  <div class="controls"><label>Phase
+    <select id="phase"><option value="">All</option><option>production</option><option>staging</option><option>dev</option></select></label></div>
+  <div id="out"></div>
+</main>
+<script src="app.js"></script>
+<script>
+nav('fleet');
+let rows = [];
+function render() {
+  const p = $('#phase').value;
+  const list = rows.filter((e) => !p || e.phase === p);
+  if (!list.length) return state($('#out'), 'No environments', 'Nothing matches this filter.');
+  $('#out').innerHTML = `<table><thead><tr><th>Environment</th><th>Cluster</th><th>Phase</th><th>Policy</th><th>Desired</th><th>Applied</th><th>Status</th><th>Detail</th><th>Last heard</th></tr></thead><tbody>` +
+    list.map((e) => `<tr><td><a href="/environment.html?id=${encodeURIComponent(e.id)}">${esc(e.name)}</a></td><td>${esc(e.cluster)}</td><td>${esc(e.phase)}</td><td>${policyCell(e)}</td><td>${esc(e.desiredVersion)}</td><td>${esc(e.appliedVersion ?? '—')}</td><td>${badge(e.status)}</td><td>${esc(e.statusDetail)}</td><td>${fmt(e.lastHeardAt)}</td></tr>`).join('') + `</tbody></table>`;
+}
+$('#phase').addEventListener('change', render);
+load('/api/fleet/environments', $('#out')).then((d) => { if (!d) return; rows = d; render(); });
+</script></body></html>
